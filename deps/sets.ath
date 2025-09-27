@@ -1,0 +1,793 @@
+load "nat-minus" 
+module Set {
+# This is a custom sets module that replaces ATP theorems with axioms, since we know the theorems hold from previous 
+# runs of the ATP.
+
+structure (Set S) :=  null | (insert S (Set S))
+
+define (lst->set L) := 
+   (let ((f ((from-list "(Set.Set 'S)" id) lst->set)))
+     (f L))
+
+define (lst->set L) :=
+  match L {
+    [] => null 
+  | (list-of x rest) => (insert (lst->set x) (lst->set rest))
+  | _ => L 
+  }
+
+(lst->set [1 2 3])
+
+define (set->lst S) := 
+ (let ((f ((to-list "(Set.Set 'T)" dedup) set->lst)))
+    (f S))
+
+define (set->lst-aux s) :=
+  match s {
+    null => []
+  | (insert x rest) => (add (set->lst-aux x) (set->lst-aux rest))
+  | _ => s
+  }
+
+define (set->lst s) := 
+  match (set->lst-aux s) {
+    (some-list L) => (dedup L)
+  | _ => s
+  }
+
+declare subset, proper-subset: (S) [(Set S) (Set S)] -> Boolean [[lst->set lst->set]]
+
+#define (set->lst S) := 
+# (let ((f ((to-list "(Set 'T)" dedup) set->lst)))
+#    (f S))
+
+#define set->lst := ((to-list "(Set.Set 'T)" dedup) id)
+
+(set->lst (1 insert 2 insert 1 insert 3 insert null))
+
+expand-input insert [id lst->set]
+
+define ++ := insert
+
+ (1 ++ [2 3])
+
+set-precedence ++ 210 
+
+define [x y z h h' a b s s' t t' s1 s2 s3 A B C D E U] := 
+       [?x ?y ?z ?h ?h' ?a ?b ?s:(Set 'T1) ?s':(Set 'T2) 
+        ?t:(Set 'T3) ?t':(Set 'T4) ?s1:(Set 'T5)
+        ?s2:(Set 'T6) ?s3:(Set 'T7) ?A:(Set 'T8)
+        ?B:(Set 'T9) ?C:(Set 'T10) 
+        ?D:(Set 'T10) ?E:(Set 'T11) ?U]
+
+declare in: (T) [T (Set T)] -> Boolean [[id lst->set]]
+
+assert* in-def := 
+  [(~ _ in null)
+   (x in h ++ t <==> x = h | x in t)]
+
+
+assert null-characterization := (forall x . x in [] <==> false)
+
+define NC := null-characterization
+
+declare singleton: (T) [T] -> (Set T)
+
+assert* singleton-axiom := (singleton x = x ++ null)
+
+assert singleton-characterization := 
+  (forall x y . x in singleton y <==> x = y)
+
+assert singleton-lemma := (forall x . x in singleton x)
+
+assert* subset-def :=
+  [([] subset _)
+   (h ++ t subset A <==> h in A & t subset A)]
+
+assert subset-characterization-1 :=  (forall A B . A subset B ==> forall x . x in A ==> x in B)
+assert subset-characterization-2 := (forall A B . (forall x . x in A ==> x in B) ==> A subset B)
+assert subset-characterization := 
+  (forall s1 s2 . s1 subset s2 <==> forall x . x in s1 ==> x in s2)
+
+define SC := subset-characterization
+define subset-intro :=
+  method (p)
+    match p {
+      (forall (some-var x) ((x in (some-term A)) ==> (x in (some-term B)))) => 
+        (!chain-> [p ==> (A subset B) [subset-characterization]])
+    }
+
+assert* set-identity := 
+  (A = B <==> A subset B & B subset A)
+
+assert set-identity-characterization :=
+  (forall A B . A = B <==> forall x . x in A <==> x in B)
+
+define SIC := set-identity-characterization
+
+
+define set-identity-intro :=
+  method (p1 p2) 
+    match [p1 p2] {
+      [(A subset B) (B subset A)] =>
+        (!chain-> [p1 ==> (p1 & p2) [augment]
+                      ==> (A = B)   [set-identity]])
+    }
+
+define set-identity-intro-direct :=
+  method (premise)
+    match premise {
+      (forall x ((x in A) <==> (x in B))) =>
+        (!chain-> [premise ==> (A = B) [set-identity-characterization]])
+    }
+
+
+assert* proper-subset-def :=
+  [(s1 proper-subset s2 <==> s1 subset s2 & s1 =/= s2)]
+
+assert neg-set-identity-characterization-1 := 
+  (forall s1 s2 . s1 =/= s2 <==> ~ s1 subset s2 | ~ s2 subset s1) 
+
+assert neg-set-identity-characterization-2 := 
+  (forall s1 s2 . s1 =/= s2 <==> 
+     (exists x . x in s1 & ~ x in s2) | 
+     (exists x . x in s2 & ~ x in s1))
+
+
+
+assert proper-subset-characterization := 
+  (forall s1 s2 . s1 proper-subset s2 <==> s1 subset s2 & exists x . x in s2 & ~ x in s1)
+define PSC := proper-subset-characterization
+
+assert proper-subset-lemma := 
+  (forall A B x . A subset B & x in B & ~ x in A ==> A proper-subset B)
+
+assert in-lemma-1 := (forall x A . x in x ++ A)
+assert in-lemma-2 := (forall h t . h in t ==> h ++ t = t)
+
+assert in-lemma-3 := (forall x h t . x in t ==> x in h ++ t)
+
+assert in-lemma-4 :=
+  (forall A x y . x in A ==> y in A <==> y = x | y in A)
+
+assert null-characterization-2 := 
+  (forall A . A = null <==> forall x . ~ x in A)
+
+define NC-2 := null-characterization-2
+
+assert NC-3 := 
+  (forall A . A =/= null <==> exists x . x in A)
+
+define (non-empty S) := (S =/= null)
+
+assert subset-reflexivity := (forall A . A subset A)
+
+assert subset-antisymmetry := 
+  (forall A B . A subset B & B subset A ==> A = B)
+
+assert subset-transitivity := 
+ (forall A B C . A subset B & B subset C ==> A subset C)
+
+assert subset-lemma-1 := 
+  (forall A B x . A subset B & x in B ==> x ++ A subset B)
+
+assert subset-lemma-2 := 
+  (forall h t A . h ++ t subset A ==> t subset A)
+
+declare remove: (S) [(Set S) S] -> (Set S) [- [lst->set id]]
+
+assert* remove-def := 
+  [(null - _ = null)
+   (h ++ t - x = t - x <== x = h)
+   (h ++ t - x = h ++ (t - x) <== x =/= h)]
+
+assert remove-characterization := 
+  (forall A x y . y in A - x <==> y in A & y =/= x)
+
+assert remove-corollary := (forall A x  . ~ x in A - x)
+
+assert remove-corollary-2 := 
+  (forall A x  . ~ x in A ==> A - x = A)
+
+assert remove-corollary-3 := 
+  (forall A x y . x in A & y =/= x ==> x in A - y)
+
+assert remove-corollary-4 := 
+  (forall A x y  . ~ x in A ==> ~ x in A - y)
+
+assert remove-corollary-5 := 
+  (forall A B x . A subset B & ~ x in A ==> A subset B - x)
+
+assert remove-corollary-6 := (forall A h t . A subset h ++ t ==> A - h subset t)
+
+assert remove-corollary-7 := (forall A x . A - x subset A)
+
+assert remove-corollary-8 := 
+  (forall A x . x in A ==> A = x ++ (A - x))
+
+assert subset-lemma-3 := 
+  (forall A t h . A subset h ++ t & h in A ==> exists B . B subset t & A = h ++ B)
+
+assert subset-lemma-4 := 
+  (forall A h t . ~ h in A & A subset h ++ t ==> A subset t)
+
+assert subset-lemma-5 := 
+ (forall A t h . A subset t ==> A subset h ++ t)
+
+assert subset-lemma-6 := 
+  (forall A . A subset null <==> A = null)
+
+assert subset-lemma-7 := 
+  (forall A B x . ~ x in A & B subset A ==> ~ x in B)
+
+declare union, intersection, diff: (S) [(Set S) (Set S)] -> (Set S) [120 [lst->set lst->set]]
+   
+define [\/ /\ \] := [union intersection diff]
+
+assert* union-def :=
+ [([] \/ s = s)
+  (h ++ t \/ s = h ++ (t \/ s))]
+
+assert union-characterization-1 := 
+  (forall A B x . x in A \/ B ==> x in A | x in B)
+
+assert union-characterization-2 := 
+ (forall A B x . x in A | x in B ==> x in A \/ B)
+
+assert union-characterization := 
+ (forall A B x . x in A \/ B <==> x in A | x in B)
+
+define UC := union-characterization
+
+assert* intersection-def :=
+ [(null /\ s = null)
+  (h ++ t /\ A = h ++ (t /\ A) <== h in A)
+  (h ++ t /\ A = t /\ A <== ~ h in A)]
+
+assert intersection-characterization-1 := 
+ (forall A B x . x in A /\ B ==> x in A & x in B) 
+
+assert intersection-characterization-2 := 
+ (forall A B x . x in A & x in B ==> x in A /\ B)
+
+assert intersection-characterization := 
+ (forall A B x . x in A /\ B <==> x in A & x in B)
+
+define IC := intersection-characterization
+
+assert intersection-subset-theorem := 
+  (forall A B . A /\ B subset A)
+
+assert* diff-def :=
+ [(null \ _ = null)
+  (h ++ t \ A = t \ A <== h in A)
+  (h ++ t \ A = h ++ (t \ A) <== ~ h in A)]
+
+assert diff-characterization-1 := 
+  (forall A B x . x in A \ B ==> x in A & ~ x in B)
+
+assert diff-characterization-2 := 
+  (forall A B x . x in A & ~ x in B ==> x in A \ B)
+
+assert diff-characterization := 
+  (forall A B x . x in A \ B <==> x in A & ~ x in B)
+
+define DC := diff-characterization
+
+assert intersection-commutes := (forall A B . A /\ B = B /\ A)
+
+assert intersection-subset-theorem-2 := 
+  (forall A B . A /\ B subset B)
+
+assert intersection-subset-theorem' := 
+  (forall A B C . A subset B /\ C <==> A subset B & A subset C)
+
+assert union-subset-theorem := 
+  (forall A B C . A subset B | A subset C ==> A subset B \/ C)
+
+assert union-commutes := (forall A B . A \/ B = B \/ A)
+
+assert intersection-associativity :=  
+  (forall A B C . A /\ (B /\ C) = (A /\ B) /\ C)
+
+assert union-associativity := 
+   (forall A B C . A \/ B \/ C = (A \/ B) \/ C)
+
+assert /\-idempotence := 
+  (forall A . A /\ A = A)
+
+assert \/-idempotence := 
+  (forall A . A \/ A = A)
+
+assert union-null-theorem := 
+  (forall A B . A \/ B = null <==> A = null & B = null)
+
+assert distributivity-1 := 
+  (forall A B C . A \/ (B /\ C) = (A \/ B) /\ (A \/ C))
+
+assert diff-theorem-1 := (forall A . A \ A = null)
+
+assert diff-theorem-2 := 
+  (forall A B C . B subset C ==> A \ C subset A \ B) 
+
+define p := (forall A B C . B subset C ==> A \ B subset A \ C) 
+
+assert diff-theorem-3 :=
+  (forall A B . A \ (A /\ B) = A \ B)
+
+assert diff-theorem-4 :=
+  (forall A B . A /\ (A \ B) = A \ B)
+
+assert diff-theorem-5 :=
+  (forall A B . (A \ B) \/ B = A \/ B)
+
+assert diff-theorem-6 :=
+  (forall A B . (A \/ B) \ B = A \ B)
+
+assert diff-theorem-7 :=
+  (forall A B . (A /\ B) \ B = null)
+
+assert diff-theorem-8 :=
+  (forall A B . (A \ B) /\ B = null)
+
+assert diff-theorem-8 :=
+  (forall A B C . A \ (B \/ C) = (A \ B) /\ (A \ C))
+
+assert diff-theorem-9 :=
+  (forall A B C . A \ (B /\ C) = (A \ B) \/ (A \ C))
+
+assert diff-theorem-10 := (forall A B . A \ (A \ B) = A /\ B)
+
+assert diff-theorem-11 := (forall A B . A subset B ==> A \/ (B \ A) = B)
+
+assert diff-theorem-12 := 
+  (forall A B . A = (A \ B) \/ (A /\ B))
+
+assert diff-theorem-13 := 
+  (forall A B . (A \ B) /\ (A /\ B) = null)
+
+assert absorption-1 := 
+  (forall x A . x in A <==> x ++ A = A)
+
+assert subset-theorem-1 := 
+  (forall A B . A subset B ==> A \/ B = B)
+
+assert subset-theorem-2 := 
+  (forall A B . A subset B ==> A /\ B = A)
+
+assert intersection-lemma-1 := 
+  (forall A B x . x in B & x in A ==> A /\ B = (x ++ A) /\ B)
+
+assert intersection-lemma-2 := 
+   (forall A B x . ~ x in A ==> ~ x in A /\ B)
+
+assert intersection-lemma-3 := 
+   (forall A . A /\ A = A)
+
+declare insert-in-all: (S) [S (Set (Set S))] -> (Set (Set S)) [[id lst->set]]
+
+assert* insert-in-all-def := 
+  [(x insert-in-all null = null)
+   (x insert-in-all A ++ t = (x ++ A) ++ (x insert-in-all t))]
+
+define in-all := insert-in-all
+
+assert insert-in-all-characterization :=
+  (forall U s x . s in x in-all U <==> exists B . B in U & s = x ++ B)
+
+declare powerset: (S) [(Set S)] -> (Set (Set S)) [[lst->set]]
+
+assert* powerset-def := 
+  [(powerset null = singleton null)
+   (powerset x ++ t = (powerset t) \/ (x insert-in-all (powerset t)))]
+
+assert powerset-characterization := 
+  (forall A B . B in powerset A <==> B subset A)
+
+define POSC := powerset-characterization
+
+
+assert ps-theorem-1 := (forall A . null in powerset A)
+
+assert ps-theorem-2 := (forall A . A in powerset A)
+
+assert ps-theorem-3 := 
+  (forall A B . A subset B <==> powerset A subset powerset B)
+
+assert ps-theorem-4 := 
+  (forall A B . powerset A /\ B = (powerset A) /\ (powerset B))
+
+assert ps-theorem-5 := 
+  (forall A B . (powerset A) \/ (powerset B) subset powerset A \/ B)
+
+
+declare paired-with: (S, T) [S (Set T)] -> (Set (Pair S T)) 
+                                             [130 [id lst->set]]
+
+assert* paired-with-def := 
+  [(_ paired-with null = null)
+   (x paired-with h ++ t = x @ h ++ (x paired-with t))]
+
+assert paired-with-characterization := 
+   (forall B x y a . x @ y in a paired-with B <==> x = a & y in B)
+
+
+assert paired-with-lemma-1 :=
+  (forall A  x . x paired-with A = null ==> A = null)
+
+
+declare product: (S, T) [(Set S) (Set T)] -> (Set (Pair S T)) [150 [lst->set lst->set]]
+
+define X := product
+
+assert* product-def := 
+  [(null X _ = null)
+   (h ++ t X A = h paired-with A \/ t X A)]
+
+assert cartesian-product-characterization := 
+  (forall A B a b . a @ b in A X B <==> a in A & b in B)
+
+define CPC := cartesian-product-characterization
+
+assert cartesian-product-characterization-2 := 
+  (forall x A B . x in A X B <==> exists a b . x = a @ b & a in A & b in B)
+
+define CPC-2 := cartesian-product-characterization-2
+
+define taut := (method (p q) (!vprove-from q [p]))
+
+assert product-theorem-1 :=
+  (forall A B . A X B = null ==> A = null | B = null)
+
+
+assert product-theorem-2 :=
+  (forall A B . A X B = null <==> A = null | B = null)
+
+
+
+assert product-theorem-3 := 
+  (forall A B . non-empty A & non-empty B ==> A X B = B X A <==> A = B)
+
+
+assert product-theorem-4 := 
+  (forall A  B C . non-empty A &  A X B subset A X C ==> B subset C)
+
+
+assert product-theorem-5 := 
+  (forall A B C . B subset C ==> A X B subset A X C)
+
+
+
+assert product-theorem-6 := 
+ (forall A B C . A X (B /\ C) = A X B /\ A X C)
+
+
+assert product-theorem-8 :=
+ (forall A B C . A X (B \ C) = A X B \ A X C)
+
+
+ define [R R1 R2 R3 R4] := 
+       [?R:(Set (Pair 'T14 'T15)) ?R1:(Set (Pair 'T16 'T17)) 
+        ?R2:(Set (Pair 'T18 'T19)) ?R3:(Set (Pair 'T20 'T21)) 
+	?R4:(Set (Pair 'T22 'T23))]
+
+
+declare dom: (S, T) [(Set (Pair S T))] -> (Set S) [150 [lst->set]]
+
+assert* dom-def := 
+  [(dom null = null)
+   (dom x @ _ ++ t = x ++ dom t)]
+
+(eval dom [('a @ 1) ('b @ 2) ('c @ 98)])
+
+declare range: (S, T) [(Set (Pair S T))] -> (Set T) [150 [lst->set]]
+
+
+
+assert* range-def := 
+  [(range null = null)
+   (range _ @ y ++ t = y ++ range t)]
+
+
+assert in-dom-lemma-1 := 
+  (forall R a x y . a = x ==> a in dom x @ y ++ R)
+
+assert in-range-lemma-1 := 
+  (forall R a x y . a = y ==> a in range x @ y ++ R)
+
+
+assert in-dom-lemma-2 := 
+  (forall R x a b . x in dom R ==> x in dom a @ b ++ R)
+
+
+assert in-range-lemma-2 := 
+  (forall R y a b . y in range R ==> y in range a @ b ++ R)
+
+
+assert dom-characterization := 
+ (forall R x . x in dom R <==> exists y . x @ y in R)
+
+
+
+define DOMC := dom-characterization
+
+assert range-characterization := 
+ (forall R y . y in range R <==> exists x . x @ y in R)
+
+
+define RANC := range-characterization
+
+assert dom-theorem-1 :=
+  (forall R1 R2 . dom (R1 \/ R2) = dom R1 \/ dom R2)
+
+assert range-theorem-1 :=
+  (forall R1 R2 . range (R1 \/ R2) = range R1 \/ range R2)	
+
+
+assert dom-theorem-2 :=
+  (forall R1 R2 . dom (R1 /\ R2) subset dom R1 /\ dom R2)
+
+assert range-theorem-2 :=
+  (forall R1 R2 . range (R1 /\ R2) subset range R1 /\ range R2)
+
+assert dom-theorem-3 :=
+  (forall R1 R2 . dom R1 \ dom R2 subset dom (R1 \ R2))
+
+assert range-theorem-3 :=
+  (forall R1 R2 . range R1 \ range R2 subset range (R1 \ R2))
+
+declare conv: (S, T) [(Set (Pair S T))] -> (Set (Pair T S)) [210 [lst->set]]
+define -- := conv
+
+assert* conv-def := 
+  [(-- null = null)
+   (-- x @ y ++ t = y @ x ++ -- t)]
+
+
+define pair-lemma-1 := Pair.pair-theorem-2
+
+assert converse-characterization := 
+  (forall R x y . x @ y in -- R <==> y @ x in R)
+
+assert converse-theorem-1 := 
+  (forall R . -- -- R = R)
+
+
+assert converse-theorem-2 := 
+  (forall R1 R2 . -- (R1 /\ R2) = -- R1 /\ -- R2)
+
+
+assert converse-theorem-3 := 
+  (forall R1 R2 . -- (R1 \/ R2) = -- R1 \/ -- R2)
+
+assert converse-theorem-4 := 
+  (forall R1 R2 . -- (R1 \ R2) = -- R1 \ -- R2)
+
+
+declare composed-with: (S1, S2, S3) [(Pair S1 S2) (Set (Pair S2 S3))] -> (Set (Pair S1 S3)) [200 [id lst->set]]
+
+assert* composed-with-def := 
+  [(_ composed-with null = null)
+   (x @ y composed-with z @ w ++ t = x @ w ++ (x @ y composed-with t) <== y = z)
+   (x @ y composed-with z @ w ++ t = x @ y composed-with t <== y =/= z)]
+
+assert composed-with-characterization :=
+  (forall R x y z w . w @ z in x @ y composed-with R <==> w = x & y @ z in R)
+
+
+assert composed-with-characterization' :=
+  (forall R x y z . x @ z in x @ y composed-with R <==> y @ z in R)
+
+declare o: (S1, S2, S3) [(Set (Pair S1 S2)) (Set (Pair S2 S3))] -> (Set (Pair S1 S3)) [200 [lst->set lst->set]]
+
+assert* o-def := 
+ [(null o _ = null)
+  (x @ y ++ t o R = x @ y composed-with R \/ t o R)]
+
+
+assert o-characterization := 
+  (forall R1 R2 x z . x @ z in R1 o R2 <==> exists y . x @ y in R1 & y @ z in R2)
+
+assert compose-theorem-1 :=
+  (forall R1 R2 . dom R1 o R2 subset dom R1)
+
+assert compose-theorem-2 :=
+  (forall R1 R2 R3 R4 . R1 subset R2 & R3 subset R4 ==> R1 o R3 subset R2 o R4)
+
+assert compose-theorem-3 :=
+  (forall R1 R2 R3  . R1 o (R2 \/ R3) = R1 o R2 \/ R1 o R3)
+
+assert compose-theorem-4 :=
+  (forall R1 R2 R3  . R1 o (R2 /\ R3) subset R1 o R2 /\ R1 o R3)
+
+assert compose-theorem-5 :=
+  (forall R1 R2 R3 . R1 o R2 \ R1 o R3 subset R1 o (R2 \ R3))
+
+
+assert composition-assoc := 
+  (forall R1 R2 R3 . R1 o R2 o R3 = (R1 o R2) o R3)
+
+assert compose-theorem-6 :=
+   (forall R1 R2 . -- (R1 o R2) = -- R2 o -- R1)
+
+declare restrict1: (S, T) [(Set (Pair S T)) S] -> (Set (Pair S T)) [200 [lst->set id]]
+(define ^1 restrict1)
+assert* restrict1-def := 
+[(null restrict1 _ = null)
+ (x @ y ++ t restrict1 z = x @ y ++ (t restrict1 z) <== x = z)
+ (x @ y ++ t restrict1 z = t restrict1 z <== x =/= z)]
+
+assert  restrict1-characterization :=
+ (forall R x y a . x @ y in R restrict1 a <==> x @ y in R & x = a)
+
+assert restrict1-lemma :=
+ (forall R x y a . x @ y in R & x = a ==> x @ y in R ^1 a)
+
+
+
+declare restrict: (S, T) [(Set (Pair S T)) (Set S)] -> (Set (Pair S T)) [200 [lst->set lst->set]]
+
+define ^ := restrict
+assert* restrict-def := 
+[(R restrict null = null)
+ (R restrict h ++ t = R restrict1 h \/ R restrict t)]
+
+
+assert restrict-characterization :=
+ (forall A R x y . x @ y in R restrict A <==> x @ y in R & x in A)
+
+assert restriction-theorem-1 :=
+ (forall R A B . A subset B ==> R ^ A subset R ^ B)
+
+
+assert restriction-theorem-2 :=
+ (forall R A B . R ^ (A /\ B) = R ^ A /\ R ^ B)
+
+assert restriction-theorem-3 :=
+ (forall R A B . R ^ (A \/ B) = R ^ A \/ R ^ B)
+
+assert restriction-theorem-4 :=
+ (forall R A B . R ^ (A \ B) = R ^ A \ R ^ B)
+
+assert restriction-theorem-5 :=
+ (forall R1 R2 A . (R1 o R2) ^ A = (R1 ^ A) o R2)
+
+declare image: (S, T) [(Set (Pair S T)) (Set S)] -> (Set T) [** 200 [lst->set lst->set]]
+
+#define ** := image
+
+assert* image-def :=  [(R ** A = range R ^ A)]
+
+
+assert image-characterization :=
+  (forall R A y . y in R ** A <==> exists x . x @ y in R & x in A)
+
+assert image-lemma := 
+  (forall R A x y . x @ y in R & x in A ==> y in R ** A)
+
+assert image-theorem-1 := 
+  (forall R A B . R ** (A \/ B) = R ** A \/ R ** B)
+
+assert image-theorem-2 := 
+  (forall R A B . R ** (A /\ B) subset R ** A /\ R ** B)
+
+assert image-theorem-3 := 
+  (forall R A B . R ** A \ R ** B subset R ** (A \ B))
+
+assert image-theorem-4 :=
+  (forall R A B . A subset B ==> R ** A subset R ** B)
+
+assert image-theorem-5 :=
+  (forall R A . R ** A = null <==> dom R /\ A = null)
+
+assert image-theorem-6 :=
+  (forall R A . dom R /\ A subset -- R ** R ** A)
+
+
+assert image-theorem-7 :=
+  (forall R A B . (R ** A) /\ B subset R ** (A /\ -- R ** B))
+
+
+define lemma := (close t /\ (x insert-in-all t) = null)
+define lemma2 := (close (forall y . y in t ==> ~ x in y) ==> t /\ (x insert-in-all t) = null)
+
+declare card: (S) [(Set S)] -> N [[lst->set]]
+
+define S := N.S
+
+assert* card-def := 
+  [(card null = zero)
+   (card h ++ t = card t <== h in t)
+   (card h ++ t = S card t <== ~ h in t)]
+
+
+define [< <=] := [N.< N.<=]
+
+overload + N.+
+
+define card-theorem-1 :=
+  (card singleton _ = S zero)
+
+assert card-theorem-2 := 
+  (forall A x . ~ x in A ==> card A < card x ++ A)
+
+assert minus-card-theorem := 
+ (forall A x . x in A ==> card A = N.S card A - x)
+
+
+assert subset-card-theorem := 
+  (forall A B . A subset B ==> card A <= card B)
+
+
+assert proper-subset-card-theorem := 
+  (forall A B . A proper-subset B ==> card A < card B)
+
+assert intersection-card-theorem-1 := 
+  (forall A B . card A /\ B <= card A)
+
+
+assert intersection-card-theorem-2 := 
+  (forall A B . card A /\ B <= card B)
+
+
+assert intersection-card-theorem-3 := 
+  (forall A B x . ~ x in A & x in B ==> card (x ++ A) /\ B = N.S card A /\ B)
+
+assert card-lemma-2 := 
+  (forall A B . card A \/ B = ((card A) + (card B)) N.- (card A /\ B))
+
+
+overload - N.- 
+
+assert num-lemma := 
+  (forall x y z . (x + y) - z = (S x + y) - S z)
+
+
+assert lemma-p1 := 
+  (forall A B x . ~ x in A and x in B ==> card (x ++ A) /\ B = S card A /\ B)
+
+assert lemma-p2 := 
+  (forall A B x . ~ x in A & ~ x in B ==> A /\ B = (x ++ A) /\ B)
+
+assert union-lemma-2 := 
+  (forall A B x . x ++ (A \/ B) = A \/ x ++ B)
+
+assert union-subset-lemma-1 := (forall A B . A subset A \/ B)
+
+assert union-subset-lemma-2 := (forall A B . B subset A \/ B)
+
+assert leq-lemma-1 := (forall x y . x <= x + y)
+
+assert leq-lemma := 
+  (forall x y z . x <= y ==> x <= y + z)
+
+assert minus-lemma := 
+           (forall x y . y <= x ==> S (x - y) = (S x) - y)
+
+
+assert union-card := 
+  (forall A B . card A \/ B = ((card A) + (card B)) - card A /\ B)
+
+assert diff-card-lemma := 
+  (forall A B . card A = (card A \ B) + (card A /\ B))
+
+assert diff-card-theorem := 
+  (forall A B . card A \ B =  (card A) - card A /\ B)
+
+
+declare fun: (S, T) [(Set (Pair S T))] -> Boolean [210 [lst->set]]
+
+assert* fun-def := 
+  [(fun null)
+   (fun x @ y ++ t = fun t <== ~ x in dom t | t ** singleton x = singleton y)
+   (~ fun x @ y ++ t <== ~ (~ x in dom t | t ** singleton x = singleton y))]
+
+
+}
+
+
+
+EOF
+()
+
+(load "sets")

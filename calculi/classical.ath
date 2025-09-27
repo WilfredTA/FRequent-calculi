@@ -1,0 +1,88 @@
+load "../sequent-calculus.ath"
+
+extend-module SequentCalculus {
+    
+    datatype PropositionalRule := IMP-R | XR | OR-R | AND-R
+        | NEG-R | NEG-L | OR-L | AND-L | WL | WR | XL
+    define-sort PropositionalProof := (Proof PropositionalRule)
+
+
+# ----------------- Examples -----------------
+
+# Example 1:
+#   a |- a
+#   ------
+#   Bot |- a, -a
+define example1 := 
+
+(deriv (axiom [(Atom 'a)] |- [(Atom 'a)])
+
+([Bot] |- [(Atom 'a) (- (Atom 'a))]) NEG-R )
+
+
+
+# Example 2:
+#   
+#     p |- p     
+#   ------------ (WR)  
+#     p |- p, q                 q |- q
+#   ----------- (XR)       -----------      (WL)
+#     p |- q, p             p, q |- q
+#   ----------- (NEG-L)    -----------      (XL)
+#   -p, p |- q            q, p |- q
+#    -----------------------------         (OR-L)
+#        -p \/ q, p |- q
+#        ---------------                   (XR)
+#        p, -p \/ q |- q
+#        -----------------------------    (IMP-R)
+#            -p \/ q |- p ---> q
+
+define example2 := (
+    deriv 
+       (
+         deriv 
+            (
+                dual-deriv
+                    (
+                        deriv
+                            (
+                                deriv
+                                    (
+                                        deriv
+                                            (axiom [(Atom 'p)] |- [(Atom 'p)])
+                                            (([(Atom 'p)] |- [(Atom 'p) (Atom 'q)]))
+                                            WR
+                                    )
+                                    ([(Atom 'p)] |- [(Atom 'q) (Atom 'p)])
+                                    XR
+                            )
+                            ([(- (Atom 'p)) (Atom 'p)] |- [(Atom 'q)])
+                            NEG-L
+                    )
+                    (
+                        deriv
+                        (
+                            deriv
+                                (axiom [(Atom 'q)] |- [(Atom 'q)])
+                                ([(Atom 'p) (Atom 'q)] |- [(Atom 'q)]) 
+                                WL
+                        )
+                        ([(Atom 'q) (Atom 'p)] |- [(Atom 'q)])
+                        XL
+                    )
+                    ([(- (Atom 'p) \/ (Atom 'q)) (Atom 'p)] |- [(Atom 'q)])
+                    OR-L
+            )
+            (
+                [(Atom 'p) (- (Atom 'p) \/ (Atom 'q))] |- [(Atom 'q)]
+            )
+           XR
+       ) 
+
+
+       ([(- (Atom 'p) \/ (Atom 'q))] |- [((Atom 'p) ---> (Atom 'q))]) 
+       
+       IMP-R
+)
+
+}

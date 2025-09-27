@@ -1,0 +1,69 @@
+load "./lex.ath"
+load "../sequent-calculus.ath"
+open SequentCalculus
+
+define (parse-error msg tokens) := 
+  (error (join msg " " (val->string tokens)))
+
+
+
+
+define (parse-formula tokens) := match tokens {
+    (list-of LPAREN rest ) => match (parse-formula rest) {
+        [f1 (list-of RPAREN rest')] => [f1 rest'] 
+        | _ => (parse-error "Expected closing parenthesis" rest)
+    }
+    | (list-of BOT rest) => [Bot rest]
+    | (list-of TOP rest) => [Top rest]
+    | (list-of NOT rest) => match (parse-formula rest) {
+        (list-of f1 rest') => [(Neg f1) rest']
+    }
+    | (list-of (VAR x) rest) => match rest {
+           (list-of IFF rest') => match (parse-formula rest') {
+                [f1 rest''] => [(Iff (Atom x) f1) rest'']
+                | _ => (parse-error "Expected equality" rest)
+            }
+            | (list-of AND rest') => match (parse-formula rest') {
+                [f1 rest''] => [(And (Atom x) f1) rest'']
+                | _ => (parse-error "Expected conjunction" rest)
+            }
+            | (list-of OR rest') => match (parse-formula rest') {
+                [f1 rest''] => [(Or (Atom x) f1) rest'']
+                | _ => (parse-error "Expected disjunction" rest)
+            }
+            | (list-of IMPLIES rest') => match (parse-formula rest') {
+                [f1 rest''] => [(Imp (Atom x) f1) rest'']
+                | _ => (parse-error "Expected implication" rest)
+            }
+            
+            | _ => [(Atom x) rest]
+        }
+    | _ => ['none tokens]
+    
+}
+
+define (parse str) := match (parse-formula (lex str)) {
+    [x []] => x
+    | _ => (parse-error "Expected formula"  (lex str))
+}
+
+define test-formula-one := "p"
+define test-formula-two := "p & q"
+define test-formula-three := "p or q"
+define test-formula-four := "p -> q"
+define test-formula-five := "p <-> q"
+define test-formula-six := "p & q <-> r"
+define test-formula-seven := "p & q <-> r"
+define test-formula-eight := "p or q -> r"
+define test-formula-nine := "p or q <-> r"
+
+(parse test-formula-one)
+(parse test-formula-two)
+(parse test-formula-three)
+(parse test-formula-four)
+(parse test-formula-five)
+(parse test-formula-six)
+(parse test-formula-seven)
+(parse test-formula-eight)
+(parse test-formula-nine)
+

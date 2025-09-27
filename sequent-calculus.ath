@@ -1,0 +1,41 @@
+
+load "./deps/sets.ath"
+
+module SequentCalculus {
+    open Set
+    define-sort Atom := Ide
+    datatype CoreBool := False | True
+
+    datatype Sentence := Top
+        | Bot
+        | (Atom a:Atom)
+        | (And left:Sentence right:Sentence)
+        | (Or  left:Sentence right:Sentence)
+        | (Neg sent:Sentence)
+        | (Imp left:Sentence right:Sentence)
+        | (Iff left:Sentence right:Sentence)
+        | (Eq  left:Sentence right:Sentence)
+
+    # Make negation have higher precedence than other operators.
+    set-precedence Neg 120
+
+    # More convenient constructor symbos
+    define - := Neg
+    define \/ := Or
+    define /\ := And
+    define <-> := Iff
+    define == := Eq
+    define ---> := Imp
+
+    # Goals and judgements
+    define-sort Ctx := (Set Sentence)
+    datatype Judgement := (|- gamma:Ctx delta:Ctx)
+    set-precedence |- 200
+    # This allows us to pass lists into a sequent and they'll be converted to sets. We get this lst->set function from the sets module.
+    expand-input |- [lst->set lst->set]
+
+    # Derivations are trees of sequents, where each step applies an inference rule
+    datatype (Proof R) := (axiom ax:Judgement) | (deriv top:(Proof R) bot:Judgement rule:R) | (dual-deriv top-left:(Proof R) top-right:(Proof R) bot:Judgement rule:R)
+
+
+}

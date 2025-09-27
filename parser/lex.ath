@@ -1,0 +1,173 @@
+datatype Token :=
+     VERTICAL_BAR
+    | DASH
+    | LEFT_SLASH
+    | RIGHT_SLASH
+    | LEFT_ANGLE_BRACKET
+    | RIGHT_ANGLE_BRACKET
+    | LPAREN
+    | RPAREN
+    | LEFT_BRACKET
+    | RIGHT_BRACKET
+    | LEFT_BRACE
+    | RIGHT_BRACE
+    | COMMA
+    | SEMICOLON
+    | AMPERSAND
+    | BOT
+    | TOP
+    | IFF
+    | IMPLIES
+    | NOT
+    | AND
+    | (RULE_INDICATOR Ide)
+    | OR
+    | ENTAIL
+    | BAR
+    | (VAR Ide)
+
+define (newline? ch) := (ch equals? `\n)
+
+define (boolean-token? token) := match token {
+    (NOT | AND | OR | IMPLIES | IFF | BOT | TOP) => true
+    | [LPAREN rest] => (boolean-token? rest)
+    | _ => false
+}
+
+
+define (skip-until L pred?) := 
+  match L {
+     [] => [] 
+   | (list-of x rest) => check {(pred? x) => L
+                               | else => (skip-until rest pred?)}
+  }
+
+  define (legal-id-char? c) := 
+  (&& (printable? c) (negate (c member? ";,=<+-*#:=()&~")))
+
+
+  define (get-kwd str) :=
+    match str {
+        (split "|-" rest) => [ENTAIL rest]
+        | (split "," rest) => [COMMA rest]
+        | (split "<->" rest) => [IFF rest]
+        | (split "->" rest) => [IMPLIES rest]
+        | (split "~" rest) => [NOT rest]
+        | (split "," rest) => [COMMA rest]
+        | (split "&" rest) => [AND rest]
+        | (split "or" rest) => [OR rest]
+        | (split "(" rest) => [LPAREN rest]
+        | (split ")" rest) => [RPAREN rest]
+        | (split "[" rest) => [LEFT_BRACKET rest]
+        | (split "]" rest) => [RIGHT_BRACKET rest]
+        | (split "{" rest) => [LEFT_BRACE rest]
+        | (split "}" rest) => [RIGHT_BRACE rest]
+        | (split ";" rest) => [SEMICOLON rest]
+        | (split "&" rest) => [AMPERSAND rest]
+        | (split "~" rest) => [NOT rest]
+        | (split "rule-" rest) => [RULE_INDICATOR rest]
+        | (split "-----" rest) => [BAR rest]
+        | _ => ['none str]
+    }
+
+define (get-id-aux str res) := match str {
+    [] => [(rev res) []]
+    | (list-of c rest) => check {(legal-id-char? c) => (get-id-aux rest (add c res))
+                                 | else => [(rev res) str]}
+}
+
+define (get-id str) := (get-id-aux str [])
+
+define (is-not-bar? c) := (not (equals? c `-))
+    
+
+
+define (get-tokens str tokens) :=
+    match (skip-until str printable?) {
+        [] => (rev tokens)
+        | str' => match (get-kwd str') {
+            ['none _] => match (get-id str') {
+                [id rest] => 
+                #  let {_ := (print " id found " id) }
+                 (get-tokens rest (add (VAR (string->id id)) tokens))
+            }
+            | [kwd rest] => match kwd {
+                 [BAR rest] =>  (get-tokens (skip-until rest is-not-bar?) (add kwd tokens))  
+                 | _ => (get-tokens rest (add kwd tokens))
+            }
+        }
+    }
+
+
+
+define test-str-one := "p |- p"
+
+define test-str-two := "p, q |- q"
+
+define test-str-three := "
+p |- p
+----- 
+p |- p, q
+"
+
+define test-str-four := "
+  p |- p
+  ----- 
+  p |- p, q  ;        q |- q
+  -----               -----
+        ~p or q, p |- q
+            -----
+        p, ~p or q |- q
+"
+(get-tokens test-str-one [])
+(get-tokens test-str-two [])
+(get-tokens test-str-three [])
+(get-tokens test-str-four [])
+
+define (test-lexer str expected) := check {(equals? (get-tokens str []) expected) => (print "Test succeeded" ) | else => (print "Test failed on " str )}
+
+define (lex str) := (get-tokens str [])
+
+(test-lexer test-str-four [
+(VAR 'p)
+ ENTAIL 
+(VAR 'p)
+ BAR 
+(VAR 'p)
+ ENTAIL 
+(VAR 'p)
+ COMMA 
+(VAR 'q)
+ SEMICOLON 
+(VAR 'q)
+ ENTAIL 
+(VAR 'q)
+ BAR BAR NOT 
+(VAR 'p)
+ OR 
+(VAR 'q)
+ COMMA 
+(VAR 'p)
+ ENTAIL 
+(VAR 'q)
+ BAR 
+(VAR 'p)
+ COMMA NOT 
+(VAR 'p)
+ OR 
+(VAR 'q)
+ ENTAIL 
+(VAR 'q)
+]) # Test succeeded
+
+
+
+define test-str-five := "
+  p |- p
+  ----- 
+  p |- p, q  ;        q |- q
+  ------               -----
+        ~p or q, p |- q
+        --------------
+        p, ~p or q |- q
+"
