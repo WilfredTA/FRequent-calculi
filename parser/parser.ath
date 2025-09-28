@@ -8,41 +8,65 @@ define (parse-error msg tokens) :=
 
 
 
-define (parse-formula tokens) := match tokens {
-    (list-of LPAREN rest ) => match (parse-formula rest) {
-        [f1 (list-of RPAREN rest')] => [f1 rest'] 
-        | _ => (parse-error "Expected closing parenthesis" rest)
-    }
-    | (list-of BOT rest) => [Bot rest]
-    | (list-of TOP rest) => [Top rest]
-    | (list-of NOT rest) => match (parse-formula rest) {
-        (list-of f1 rest') => [(Neg f1) rest']
-    }
-    | (list-of (VAR x) rest) => match rest {
-           (list-of IFF rest') => match (parse-formula rest') {
-                [f1 rest''] => [(Iff (Atom x) f1) rest'']
-                | _ => (parse-error "Expected equality" rest)
-            }
-            | (list-of AND rest') => match (parse-formula rest') {
-                [f1 rest''] => [(And (Atom x) f1) rest'']
-                | _ => (parse-error "Expected conjunction" rest)
-            }
-            | (list-of OR rest') => match (parse-formula rest') {
-                [f1 rest''] => [(Or (Atom x) f1) rest'']
-                | _ => (parse-error "Expected disjunction" rest)
-            }
-            | (list-of IMPLIES rest') => match (parse-formula rest') {
-                [f1 rest''] => [(Imp (Atom x) f1) rest'']
-                | _ => (parse-error "Expected implication" rest)
-            }
-            
-            | _ => [(Atom x) rest]
-        }
-    | _ => ['none tokens]
-    
-}
+(define 
 
-define (parse str) := match (parse-formula (lex str)) {
+
+    (parse-iff tokens) := match (parse-imp tokens) {
+        [lhs rest] => match rest {
+            (list-of IFF rest') => match (parse-iff rest') {
+                [rhs rest''] => [(Iff lhs rhs) rest'']
+                | _ => (parse-error "Expected bi-implication" rest')
+            }
+            | _ => [lhs rest]
+        }
+    }
+    (parse-imp tokens) := match (parse-or tokens) {
+        [lhs rest] => match rest {
+            (list-of IMPLIES rest') => match (parse-imp rest') {
+                [rhs rest''] => [(Imp lhs rhs) rest'']
+            }
+            | _ => [lhs rest]
+        }
+    }
+
+    (parse-or tokens) := match (parse-and tokens) {
+        [lhs rest] => match rest {
+            (list-of OR rest') => match (parse-and rest') {
+                [rhs rest''] => [(Or lhs rhs) rest'']
+                | _ => (parse-error "Expected disjunction" rest')
+            }
+            | _ => [lhs rest]
+        }
+    }
+    (parse-and tokens) :=  match (parse-neg tokens) {
+        [lhs rest] => match rest {
+            (list-of AND rest') => match (parse-neg rest') {
+                [rhs rest''] => [(And lhs rhs) rest'']
+                | _ => (parse-error "Expected conjunction" rest')
+            }
+            | _ => [lhs rest]
+        }
+    }
+    (parse-neg tokens) := match tokens {
+         (list-of NOT rest) => match (parse-neg rest) {
+            [p rest'] => [(Neg p) rest']
+         }
+         | _ => (parse-atom tokens)
+    }
+    (parse-atom tokens) := match tokens {
+        (list-of (VAR x) rest) => [(Atom x) rest]
+        | (list-of BOT rest) => [Bot rest]
+        | (list-of TOP rest) => [Top rest]
+        | (list-of LPAREN rest) => match (parse-iff rest) {
+            [f1 (list-of RPAREN rest')] => [f1 rest']
+            | _ => (parse-error "Expected closing parenthesis" rest)
+        }
+        | _ => (parse-error "Expected atom" tokens)
+    }
+
+)
+
+define (parse str) := match (parse-iff (lex str)) {
     [x []] => x
     | _ => (parse-error "Expected formula"  (lex str))
 }
@@ -56,7 +80,7 @@ define test-formula-six := "p & q <-> r"
 define test-formula-seven := "p & q <-> r"
 define test-formula-eight := "p or q -> r"
 define test-formula-nine := "p or q <-> r"
-
+define test-formula-ten := "p or (q <-> r)"
 (parse test-formula-one)
 (parse test-formula-two)
 (parse test-formula-three)
@@ -66,4 +90,5 @@ define test-formula-nine := "p or q <-> r"
 (parse test-formula-seven)
 (parse test-formula-eight)
 (parse test-formula-nine)
+(parse test-formula-ten)
 
