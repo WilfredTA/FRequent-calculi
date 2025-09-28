@@ -1,0 +1,63 @@
+load "./sequent.ath"
+
+
+# Generates a list of levels. Each level is a list of sequents at some depth in the proof tree.
+(define  
+    (parse-proof-aux tokens levels) := match (parse-level tokens) {
+        ['none tokens'] => match tokens' {
+            (list-of BAR rest') => (parse-proof-aux rest' levels)
+        }
+        | [level rest] => match rest {
+            (list-of BAR rest') => match (parse-proof-aux rest' (add level levels)) {
+             [proof _] => [proof []]
+            }
+            | _ => [(add level levels) rest]
+        }
+    }
+
+    (parse-level tokens) := match (parse-sequent tokens) {
+        ['none tokens] => ['none tokens]
+        | [sequent rest] => match rest {
+            (list-of SEMICOLON rest') => match (parse-level rest') {
+                [sequentl2 rest''] => [(add sequent sequentl2) rest'']
+            }
+            | _ => [[sequent] rest]
+        }
+    }
+)
+
+
+define (parse-proof tokens) := (first (parse-proof-aux tokens []))
+
+
+
+
+define test-str-one := 
+"a |- a ; p |- p
+-----
+Bot |- a, ~a"
+
+define test-str-two := "
+  p |- p
+  ----- 
+  p |- p, q  ;        q |- q
+  -----               -----
+        ~p or q, p |- q
+            -----
+        p, ~p or q |- q
+"
+
+
+
+define proof-one :=    (parse-proof (lex test-str-one))
+define proof-two := (parse-proof (lex test-str-two))
+
+
+
+#(iter print proof-one)
+
+
+(iter print proof-two)
+
+
+(length proof-two)

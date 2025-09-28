@@ -67,6 +67,8 @@ define (skip-until L pred?) :=
         | (split "~" rest) => [NOT rest]
         | (split "rule-" rest) => [RULE_INDICATOR rest]
         | (split "-----" rest) => [BAR rest]
+        | (split "Bot" rest) => [BOT rest]
+        | (split "Top" rest) => [TOP rest]
         | _ => ['none str]
     }
 
@@ -88,7 +90,6 @@ define (get-tokens str tokens) :=
         | str' => match (get-kwd str') {
             ['none _] => match (get-id str') {
                 [id rest] => 
-                #  let {_ := (print " id found " id) }
                  (get-tokens rest (add (VAR (string->id id)) tokens))
             }
             | [kwd rest] => match kwd {
@@ -162,12 +163,3 @@ define (lex str) := (get-tokens str [])
 
 
 
-define test-str-five := "
-  p |- p
-  ----- 
-  p |- p, q  ;        q |- q
-  ------               -----
-        ~p or q, p |- q
-        --------------
-        p, ~p or q |- q
-"
