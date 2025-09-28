@@ -1,6 +1,8 @@
 load "./sentence.ath"
 
 module ParserTest {
+
+    define (parse-sentence str) := (SentenceParser.parse-sentence (lex str))
     define test-formula-one := "p"
     define test-formula-two := "p & q"
     define test-formula-three := "p or q"
