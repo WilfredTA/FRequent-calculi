@@ -55,14 +55,13 @@ module SentenceParser {
                 [f1 (list-of RPAREN rest')] => [f1 rest']
                 | _ => (parse-error "Expected closing parenthesis" rest)
             }
-            | _ => (parse-error "Expected atom" tokens)
+            | _ => ['none tokens]
         }
 
     )
 
     define (parse-sentence tokens) := match (parse-iff tokens) {
-        [x []] => x
-        | _ => (parse-error "Expected formula"  tokens)
+        [x rest] => [x rest]
     }
 
 

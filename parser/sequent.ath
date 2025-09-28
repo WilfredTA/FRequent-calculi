@@ -1,0 +1,38 @@
+load "./sentence.ath"
+
+define [insert null] := [Set.insert Set.null]
+define (parse-sentence tokens) := (SentenceParser.parse-sentence tokens)
+
+(define 
+
+
+    (parse-sequent tokens) := match (parse-subsequent-formula tokens) {
+        [lhs rest] => match rest {
+            (list-of ENTAILS rest') => match (parse-subsequent-formula rest') {
+                [rhs rest''] => [(lhs |- rhs) rest'']
+            }
+            | _ =>  (parse-error "Expected ENTAILS " rest)
+        }
+    }
+    (parse-subsequent-formula tokens) := match (parse-sentence tokens) {
+        [f1 rest] =>  match rest {
+            (list-of COMMA rest') => match (parse-subsequent-formula rest') {
+                [f2 rest''] => [(f1 insert f2) rest'']
+            }
+            | _ => [(f1 insert null) rest]
+        }
+        
+
+    }
+)
+
+
+
+define test-str-one := "p |- p"
+
+define test-str-two := "p, (q & r), (p -> (q or r)) |- q"
+
+
+(parse-sequent (lex test-str-one))
+
+(parse-sequent (lex test-str-two))
