@@ -1,0 +1,4 @@
+
+define (parse-error msg tokens) := 
+  (error (join msg " " (val->string tokens)))
+

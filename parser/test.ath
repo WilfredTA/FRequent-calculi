@@ -1,0 +1,25 @@
+load "./sentence.ath"
+
+module ParserTest {
+    define test-formula-one := "p"
+    define test-formula-two := "p & q"
+    define test-formula-three := "p or q"
+    define test-formula-four := "p -> q"
+    define test-formula-five := "p <-> q"
+    define test-formula-six := "p & q <-> r"
+    define test-formula-seven := "p & q <-> r"
+    define test-formula-eight := "p or q -> r"
+    define test-formula-nine := "p or q <-> r"
+    define test-formula-ten := "p or (q <-> r)"
+    (parse-sentence  test-formula-one)
+    (parse-sentence test-formula-two)
+    (parse-sentence test-formula-three)
+    (parse-sentence test-formula-four)
+    (parse-sentence test-formula-five)
+    (parse-sentence test-formula-six)
+    (parse-sentence test-formula-seven)
+    (parse-sentence test-formula-eight)
+    (parse-sentence test-formula-nine)
+    (parse-sentence test-formula-ten)
+
+}
